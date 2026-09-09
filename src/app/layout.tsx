@@ -65,6 +65,8 @@ export default async function RootLayout({
   return (
     <html lang='zh-CN' suppressHydrationWarning>
       <head>
+        {/* 禁用 Referrer 发送，解决第三方图片防盗链拦截 */}
+        <meta name="referrer" content="no-referrer" />
         {/* 将配置序列化后直接写入脚本，浏览器端可通过 window.RUNTIME_CONFIG 获取 */}
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         <script
