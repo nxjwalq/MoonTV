@@ -74,11 +74,14 @@ export async function POST(req: NextRequest) {
       // 未配置 PASSWORD 时直接放行
       if (!envPassword) {
         const response = NextResponse.json({ ok: true });
+        const cookieValue = await generateAuthCookie();
+        const expires = new Date();
+        expires.setDate(expires.getDate() + 7);
 
-        // 清除可能存在的认证cookie
-        response.cookies.set('auth', '', {
+        // OrionTV 通过有效的 Set-Cookie 响应确认免密码登录成功
+        response.cookies.set('auth', cookieValue, {
           path: '/',
-          expires: new Date(0),
+          expires,
           sameSite: 'lax', // 改为 lax 以支持 PWA
           httpOnly: false, // PWA 需要客户端可访问
           secure: false, // 根据协议自动设置
