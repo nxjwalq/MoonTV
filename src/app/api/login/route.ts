@@ -65,6 +65,36 @@ async function generateAuthCookie(
   return encodeURIComponent(JSON.stringify(authData));
 }
 
+async function createPasswordlessLoginResponse() {
+  const response = NextResponse.json({ ok: true });
+  const cookieValue = await generateAuthCookie();
+  const expires = new Date();
+  expires.setDate(expires.getDate() + 7);
+
+  // OrionTV 通过有效的 Set-Cookie 响应确认免密码登录成功
+  response.cookies.set('auth', cookieValue, {
+    path: '/',
+    expires,
+    sameSite: 'lax', // 改为 lax 以支持 PWA
+    httpOnly: false, // PWA 需要客户端可访问
+    secure: false, // 根据协议自动设置
+  });
+
+  return response;
+}
+
+// 兼容 Android 客户端跟随 HTTP -> HTTPS 302 时将 POST 改为 GET
+export async function GET() {
+  if (STORAGE_TYPE === 'localstorage' && !process.env.PASSWORD) {
+    return createPasswordlessLoginResponse();
+  }
+
+  return NextResponse.json(
+    { error: 'Method Not Allowed' },
+    { status: 405, headers: { Allow: 'POST' } }
+  );
+}
+
 export async function POST(req: NextRequest) {
   try {
     // 本地 / localStorage 模式——仅校验固定密码
@@ -73,21 +103,7 @@ export async function POST(req: NextRequest) {
 
       // 未配置 PASSWORD 时直接放行
       if (!envPassword) {
-        const response = NextResponse.json({ ok: true });
-        const cookieValue = await generateAuthCookie();
-        const expires = new Date();
-        expires.setDate(expires.getDate() + 7);
-
-        // OrionTV 通过有效的 Set-Cookie 响应确认免密码登录成功
-        response.cookies.set('auth', cookieValue, {
-          path: '/',
-          expires,
-          sameSite: 'lax', // 改为 lax 以支持 PWA
-          httpOnly: false, // PWA 需要客户端可访问
-          secure: false, // 根据协议自动设置
-        });
-
-        return response;
+        return createPasswordlessLoginResponse();
       }
 
       const { password } = await req.json();
